@@ -1,6 +1,7 @@
 package com.tailtales.backend.auth.service;
 
 import com.tailtales.backend.domain.member.entity.Member;
+import com.tailtales.backend.domain.member.entity.MemberRole;
 import com.tailtales.backend.domain.member.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,7 +23,7 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String id) throws UsernameNotFoundException {
-        Member member = memberRepository.findById(id)
+        Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
                 .orElseThrow(() -> new UsernameNotFoundException(id + "와 같은 아이디를 가진 회원을 찾을 수 없습니다."));
 
         if (member.isDeleted()) {

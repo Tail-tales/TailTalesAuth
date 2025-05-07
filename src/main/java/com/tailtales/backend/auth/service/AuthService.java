@@ -1,6 +1,5 @@
 package com.tailtales.backend.auth.service;
 
-import com.tailtales.backend.auth.dto.AdminInsertRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.dto.MailResponseDto;
 import com.tailtales.backend.auth.util.JwtUtil;
@@ -34,34 +33,6 @@ public class AuthService {
     private final MemberRepository memberRepository;
     private final SimpleMailMessageService simpleMailMessageService;
 
-    public void insertAdmin(AdminInsertRequestDto dto) {
-
-        if (memberRepository.existsById(dto.getId())) {
-
-            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
-
-        }
-
-        if (memberRepository.existsByEmail(dto.getEmail())) {
-
-            throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
-
-        }
-
-        Member member = Member.builder()
-                .name(dto.getName())
-                .id(dto.getId())
-                .password(bCryptPasswordEncoder.encode(dto.getPassword()))
-                .contact(dto.getContact())
-                .email(dto.getEmail())
-                .role(MemberRole.ROLE_ADMIN)
-                .isDeleted(false)
-                .build();
-
-        memberRepository.save(member);
-
-    }
-
     public boolean isDuplicateId(String id) {
         return memberRepository.existsById(id);
     }
@@ -78,7 +49,7 @@ public class AuthService {
         // 인증 성공 시 JWT 토큰 생성
         if (authentication.isAuthenticated()) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(id);
-            Member member = memberRepository.findById(id)
+            Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
                     .orElseThrow(() -> new NoSuchElementException("해당 아이디의 회원을 찾을 수 없습니다."));
             String accessToken = jwtUtil.generateAccessToken(userDetails.getUsername(), Map.of("roles", List.of(member.getRole().name())), member.getRole());
             String refreshToken = jwtUtil.generateRefreshToken();
@@ -131,7 +102,7 @@ public class AuthService {
     }
 
     public void sendMail(String id) {
-        Member member = memberRepository.findById(id)
+        Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
                 .orElseThrow(() -> new NoSuchElementException("해당 아이디의 관리자를 찾을 수 없습니다."));
 
         // 1. 임시 비밀번호 생성

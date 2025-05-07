@@ -1,4 +1,4 @@
-package com.tailtales.backend.auth.dto;
+package com.tailtales.backend.domain.member.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

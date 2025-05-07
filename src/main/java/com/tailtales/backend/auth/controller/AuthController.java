@@ -1,6 +1,5 @@
 package com.tailtales.backend.auth.controller;
 
-import com.tailtales.backend.auth.dto.AdminInsertRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.service.AuthService;
@@ -8,7 +7,6 @@ import com.tailtales.backend.auth.util.JwtUtil;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
@@ -36,15 +34,6 @@ public class AuthController {
         refreshTokenCookie.setMaxAge((int) (jwtUtil.getRefreshTokenValiditySeconds() / 1000));
         refreshTokenCookie.setPath("/auth/refresh");
         response.addCookie(refreshTokenCookie);
-    }
-
-    // 관리자 회원가입
-    @PostMapping
-    public ResponseEntity<String> insertAdmin(@RequestBody @Valid AdminInsertRequestDto adminInsertRequestDto) {
-
-        authService.insertAdmin(adminInsertRequestDto);
-        return ResponseEntity.ok("관리자 등록이 완료되었습니다.");
-
     }
 
     // 관리자 아이디 중복 체크
