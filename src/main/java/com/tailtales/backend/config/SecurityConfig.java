@@ -38,11 +38,12 @@ public class SecurityConfig {
         http
                 .csrf((csrf) -> csrf.disable()) // CSRF 비활성화
                 .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers(POST, "/api/members").permitAll() // 회원가입
                         .requestMatchers("/auth/login").permitAll() // 로그인
-                        .requestMatchers(POST, "/auth").permitAll() // 회원가입
                         .requestMatchers(GET, "/auth/exists/id/**").permitAll() // 아이디 중복체크
                         .requestMatchers(GET, "/auth/exists/email/**").permitAll() // 이메일 중복체크
                         .requestMatchers(POST, "/auth/findPassword/**").permitAll() // 비밀번호 찾기
+                        .requestMatchers("/api/members/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 나머지 요청은 인증 필요
                 )
                 .sessionManagement((sessionManagement) ->
