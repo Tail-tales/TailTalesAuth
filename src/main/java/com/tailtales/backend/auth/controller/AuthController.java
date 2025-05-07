@@ -15,6 +15,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.NoSuchElementException;
+
 @Log4j2
 @RestController
 @RequestMapping("/auth")
@@ -54,7 +56,7 @@ public class AuthController {
 
     }
 
-    // 이메일 중복 체크
+    // 관리자 이메일 중복 체크
     @GetMapping("/exists/email/{email}")
     public ResponseEntity<Boolean> checkDuplicateEmail(@PathVariable(name = "email") String email) {
         boolean isDuplicate = authService.isDuplicateEmail(email);
@@ -105,6 +107,22 @@ public class AuthController {
             expiredCookie.setPath("/auth/refresh");
             response.addCookie(expiredCookie);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
+
+    }
+
+    // 관리자 비밀번호 찾기
+    @PostMapping("/findPassword")
+    public ResponseEntity<String> findPassword(@RequestParam String id) {
+
+        try {
+            authService.sendMail(id);
+            return ResponseEntity.ok("새로운 비밀번호를 해당 관리자의 이메일로 발송했습니다.");
+        } catch (NoSuchElementException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            log.error(e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("새로운 비밀번호 발송에 실패했습니다.");
         }
 
     }

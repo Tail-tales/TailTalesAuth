@@ -2,6 +2,7 @@ package com.tailtales.backend.auth.service;
 
 import com.tailtales.backend.auth.dto.AdminInsertRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
+import com.tailtales.backend.auth.dto.MailResponseDto;
 import com.tailtales.backend.auth.util.JwtUtil;
 import com.tailtales.backend.domain.member.entity.Member;
 import com.tailtales.backend.domain.member.entity.MemberRole;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.UUID;
 
 @Service
 @Transactional
@@ -30,6 +32,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final UserDetailsService userDetailsService;
     private final MemberRepository memberRepository;
+    private final SimpleMailMessageService simpleMailMessageService;
 
     public void insertAdmin(AdminInsertRequestDto dto) {
 
@@ -125,6 +128,37 @@ public class AuthService {
                 .refreshExpiresIn(jwtUtil.getExpirationTimeFromRefreshToken(refreshToken) / 1000) // 기존 만료 시간 유지
                 .id(member.getId())
                 .build();
+    }
+
+    public void sendMail(String id) {
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("해당 아이디의 관리자를 찾을 수 없습니다."));
+
+        // 1. 임시 비밀번호 생성
+        String newPassword = generateRandomPassword();
+        String encodedPassword = bCryptPasswordEncoder.encode(newPassword);
+
+        // 2. DB에 새로운 비밀번호 저장
+        Member updatedMember = member.toBuilder()
+                .password(encodedPassword)
+                .build();
+        memberRepository.save(updatedMember);
+
+        // 3. MailResponseDto 생성
+        MailResponseDto mailResponseDto = MailResponseDto.builder()
+                .to(member.getEmail())
+                .title("새로운 비밀번호 안내")
+                .content("새로운 비밀번호는 다음과 같습니다: " + newPassword + "\n로그인 후 반드시 비밀번호를 변경해주세요.")
+                .build();
+
+        // 4. 이메일 발송
+        simpleMailMessageService.sendEmail(mailResponseDto.getTo(), mailResponseDto.getTitle(), mailResponseDto.getContent());
+
+    }
+
+    private String generateRandomPassword() {
+        // UUID를 사용하여 임시 비밀번호 생성 (길이 조절 가능)
+        return UUID.randomUUID().toString().substring(0, 12);
     }
 
 }
