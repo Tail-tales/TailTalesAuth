@@ -4,6 +4,7 @@ import com.tailtales.backend.auth.dto.AdminLoginRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.service.AuthService;
 import com.tailtales.backend.auth.util.JwtUtil;
+import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
@@ -26,6 +27,29 @@ public class AuthController {
     private final JwtUtil jwtUtil;
 
     private static final String COOKIE_NAME = "refreshToken";
+
+    // 관리자 토큰 인증
+    @GetMapping("/verify")
+    public ResponseEntity<String> verifyToken(@RequestHeader("Authorization") String authorizationHeader) {
+        String token = jwtUtil.extractTokenFromHeader(authorizationHeader);
+
+        if (token == null) {
+            return new ResponseEntity<>("유효하지 않은 Authorization 헤더입니다.", HttpStatus.UNAUTHORIZED);
+        }
+
+        if (jwtUtil.validateAccessToken(token)) {
+            Claims claims = jwtUtil.getClaimsFromToken(token);
+            if (claims != null) {
+                String memberId = claims.getSubject();
+                return new ResponseEntity<>(memberId, HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>("토큰에서 정보를 추출하는데 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+
+        } else {
+            return new ResponseEntity<>("유효하지 않거나 만료된 토큰입니다.", HttpStatus.UNAUTHORIZED);
+        }
+    }
 
     // 중복되는 코드 메서드로 분리
     private void addRefreshTokenCookie(HttpServletResponse response, String refreshToken) {
