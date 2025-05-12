@@ -76,6 +76,19 @@ public class AuthService {
         return null; // 인증 실패
     }
 
+    public void logout(String id) {
+
+        Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
+                .orElseThrow(() -> new NoSuchElementException("해당 아이디의 관리자를 찾을 수 없습니다."));
+
+        Member updatedMember = member.toBuilder()
+                .refreshToken(null)
+                .build();
+
+        memberRepository.save(updatedMember);
+
+    }
+
     public AdminLoginResponseDto refreshAccessToken(String refreshToken) {
 
         // 1. refreshToken 유효성 검증

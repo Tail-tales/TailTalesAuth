@@ -95,6 +95,24 @@ public class AuthController {
 
     }
 
+    // 관리자 로그아웃
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorizationHeader) {
+
+        String token = jwtUtil.extractTokenFromHeader(authorizationHeader);
+        if (token != null) {
+            Claims claims = jwtUtil.getClaimsFromToken(token);
+            if (claims != null) {
+                String memberId = claims.getSubject();
+                authService.logout(memberId);
+                return ResponseEntity.ok().build();
+            }
+        }
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+
+    }
+
     // 토큰 갱신 요청
     @PostMapping("/refresh")
     public ResponseEntity<AdminLoginResponseDto> refreshAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
