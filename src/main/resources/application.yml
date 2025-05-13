@@ -13,6 +13,12 @@ spring:
       maximum-pool-size: 5
       connection-timeout: 5000
 
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+
   jpa:
     hibernate:
       ddl-auto: update

@@ -56,6 +56,9 @@ public class Member {
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @Column(name = "is_deleted")
     @Builder.Default
     private boolean isDeleted = false;
