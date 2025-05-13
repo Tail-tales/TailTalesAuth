@@ -12,6 +12,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsUtils;
 
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
@@ -38,6 +39,7 @@ public class SecurityConfig {
         http
                 .csrf((csrf) -> csrf.disable()) // CSRF 비활성화
                 .authorizeHttpRequests((auth) -> auth
+                        .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
                         .requestMatchers(POST, "/api/members").permitAll() // 회원가입
                         .requestMatchers("/auth/login").permitAll() // 로그인
                         .requestMatchers(GET, "/auth/exists/id/**").permitAll() // 아이디 중복체크
