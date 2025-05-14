@@ -2,6 +2,7 @@ package com.tailtales.backend.auth.controller;
 
 import com.tailtales.backend.auth.dto.AdminLoginRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
+import com.tailtales.backend.auth.dto.UserLoginResponseDto;
 import com.tailtales.backend.auth.service.AuthService;
 import com.tailtales.backend.auth.util.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -56,7 +57,7 @@ public class AuthController {
         Cookie refreshTokenCookie = new Cookie(COOKIE_NAME, refreshToken);
         refreshTokenCookie.setHttpOnly(true);
         refreshTokenCookie.setMaxAge((int) (jwtUtil.getRefreshTokenValiditySeconds() / 1000));
-        refreshTokenCookie.setPath("/auth/refresh");
+        refreshTokenCookie.setPath("/");
         response.addCookie(refreshTokenCookie);
     }
 
@@ -97,31 +98,42 @@ public class AuthController {
 
     // 관리자 로그아웃
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorizationHeader) {
+    public ResponseEntity<Void> logout(@RequestHeader("Authorization") String authorizationHeader,
+                                       HttpServletResponse response) {
 
         String token = jwtUtil.extractTokenFromHeader(authorizationHeader);
         if (token != null) {
             Claims claims = jwtUtil.getClaimsFromToken(token);
             if (claims != null) {
                 String memberId = claims.getSubject();
-                authService.logout(memberId);
-                return ResponseEntity.ok().build();
+                try {
+                    authService.logout(memberId);
+
+                    // refreshToken 쿠키 삭제
+                    Cookie cookie = new Cookie(COOKIE_NAME, null);
+                    cookie.setHttpOnly(true);
+                    cookie.setMaxAge(0); // 즉시 만료
+                    cookie.setPath("/");
+                    response.addCookie(cookie);
+
+                    return ResponseEntity.ok().build();
+                } catch (NoSuchElementException e) {
+                    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+                }
             }
         }
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-    // 토큰 갱신 요청
-    @PostMapping("/refresh")
-    public ResponseEntity<AdminLoginResponseDto> refreshAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
+    // 관리자 토큰 갱신 요청
+    @PostMapping("/admin/refresh")
+    public ResponseEntity<AdminLoginResponseDto> refreshAdminAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
 
         if (refreshToken == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Refresh Token이 쿠키에 없음
         }
 
-        AdminLoginResponseDto responseDto = authService.refreshAccessToken(refreshToken);
+        AdminLoginResponseDto responseDto = authService.refreshAdminAccessToken(refreshToken);
         if (responseDto != null) {
             addRefreshTokenCookie(response, responseDto.getRefreshToken());
             return ResponseEntity.ok(AdminLoginResponseDto.builder()
@@ -135,7 +147,37 @@ public class AuthController {
             // 쿠키를 만료시켜 클라이언트에서 삭제하도록 유도
             Cookie expiredCookie = new Cookie(COOKIE_NAME, null);
             expiredCookie.setMaxAge(0);
-            expiredCookie.setPath("/auth/refresh");
+            expiredCookie.setPath("/");
+            response.addCookie(expiredCookie);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+        }
+
+    }
+
+    // 사용자 토큰 갱신 요청
+    @PostMapping("/user/refresh")
+    public ResponseEntity<UserLoginResponseDto> refreshUserAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
+
+        if (refreshToken == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Refresh Token이 쿠키에 없음
+        }
+
+        UserLoginResponseDto responseDto = authService.refreshUserAccessToken(refreshToken);
+        if (responseDto != null) {
+            addRefreshTokenCookie(response, responseDto.getRefreshToken());
+            return ResponseEntity.ok(UserLoginResponseDto.builder()
+                    .accessToken(responseDto.getAccessToken())
+                    .tokenType(responseDto.getTokenType())
+                    .expiresIn(responseDto.getExpiresIn())
+                    .name(responseDto.getName())
+                    .email(responseDto.getEmail())
+                    .build());
+        } else {
+            // Refresh Token이 유효하지 않음
+            // 쿠키를 만료시켜 클라이언트에서 삭제하도록 유도
+            Cookie expiredCookie = new Cookie(COOKIE_NAME, null);
+            expiredCookie.setMaxAge(0);
+            expiredCookie.setPath("/");
             response.addCookie(expiredCookie);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
@@ -144,7 +186,7 @@ public class AuthController {
 
     // 관리자 비밀번호 찾기
     @PostMapping("/findPassword")
-    public ResponseEntity<String> findPassword(@RequestParam String id) {
+    public ResponseEntity<String> findPassword(@RequestParam(name = "id") String id) {
 
         try {
             authService.sendMail(id);

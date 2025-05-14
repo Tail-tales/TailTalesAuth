@@ -2,6 +2,7 @@ package com.tailtales.backend.auth.service;
 
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.dto.MailResponseDto;
+import com.tailtales.backend.auth.dto.UserLoginResponseDto;
 import com.tailtales.backend.auth.util.JwtUtil;
 import com.tailtales.backend.domain.member.entity.Member;
 import com.tailtales.backend.domain.member.entity.MemberRole;
@@ -33,12 +34,13 @@ public class AuthService {
     private final MemberRepository memberRepository;
     private final SimpleMailMessageService simpleMailMessageService;
 
-    public boolean isDuplicateId(String id) {
-        return memberRepository.existsById(id);
-    }
+    // 관리자 아이디 중복체크
+    public boolean isDuplicateId(String id) { return memberRepository.existsById(id); }
 
+    // 관리자, 사용자 이메일 중복체크
     public boolean isDuplicateEmail(String email) { return memberRepository.existsByEmail(email); }
 
+    // 관리자 로그인
     public AdminLoginResponseDto login(String id, String password) {
 
         // 사용자 인증 (AuthenticationManager 사용)
@@ -76,6 +78,7 @@ public class AuthService {
         return null; // 인증 실패
     }
 
+    // 관리자 로그아웃
     public void logout(String id) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
@@ -89,7 +92,8 @@ public class AuthService {
 
     }
 
-    public AdminLoginResponseDto refreshAccessToken(String refreshToken) {
+    // 관리자 토큰 재발급
+    public AdminLoginResponseDto refreshAdminAccessToken(String refreshToken) {
 
         // 1. refreshToken 유효성 검증
         if (!jwtUtil.validateRefreshToken(refreshToken)) {
@@ -114,6 +118,38 @@ public class AuthService {
                 .build();
     }
 
+    // 사용자 토큰 재발급
+    public UserLoginResponseDto refreshUserAccessToken(String refreshToken) {
+
+        // 1. refreshToken 유효성 검증
+        if (!jwtUtil.validateRefreshToken(refreshToken)) {
+            return null; // 유효하지 않은 refreshToken
+        }
+
+        // 2. refreshToken으로 사용자 조회
+        Member member = memberRepository.findByRefreshToken(refreshToken)
+                .orElseThrow(() -> new NoSuchElementException("유효하지 않은 Refresh Token입니다."));
+
+        // 3. 새로운 accessToken 생성
+        String newAccessToken = jwtUtil.generateAccessToken(
+                member.getProviderId(),
+                Map.of("name", member.getName(), "email", member.getEmail()), // claims
+                member.getRole()
+        );
+        long newAccessTokenExpiresIn = jwtUtil.getExpirationTimeFromAccessToken(newAccessToken);
+        long refreshTokenExpiresIn = jwtUtil.getExpirationTimeFromRefreshToken(refreshToken); // 기존 refreshToken 만료 시간 유지
+
+        return UserLoginResponseDto.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(refreshToken)
+                .expiresIn(newAccessTokenExpiresIn / 1000)
+                .refreshExpiresIn(refreshTokenExpiresIn / 1000)
+                .name(member.getName())
+                .email(member.getEmail())
+                .build();
+    }
+
+    // 관리자 비밀번호 찾기
     public void sendMail(String id) {
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
                 .orElseThrow(() -> new NoSuchElementException("해당 아이디의 관리자를 찾을 수 없습니다."));
