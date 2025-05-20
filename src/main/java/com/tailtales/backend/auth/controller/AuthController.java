@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.NoSuchElementException;
@@ -31,25 +33,19 @@ public class AuthController {
 
     // 관리자 토큰 인증
     @GetMapping("/verify")
-    public ResponseEntity<String> verifyToken(@RequestHeader("Authorization") String authorizationHeader) {
-        String token = jwtUtil.extractTokenFromHeader(authorizationHeader);
+    public ResponseEntity<String> verifyToken() {
 
-        if (token == null) {
-            return new ResponseEntity<>("유효하지 않은 Authorization 헤더입니다.", HttpStatus.UNAUTHORIZED);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("/auth/verify 엔드포인트에 인증되지 않은 요청이 도달했습니다.");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증된 사용자 정보가 없습니다.");
         }
 
-        if (jwtUtil.validateAccessToken(token)) {
-            Claims claims = jwtUtil.getClaimsFromToken(token);
-            if (claims != null) {
-                String memberId = claims.getSubject();
-                return new ResponseEntity<>(memberId, HttpStatus.OK);
-            } else {
-                return new ResponseEntity<>("토큰에서 정보를 추출하는데 실패했습니다.", HttpStatus.INTERNAL_SERVER_ERROR);
-            }
+        String memberId = authentication.getName();
 
-        } else {
-            return new ResponseEntity<>("유효하지 않거나 만료된 토큰입니다.", HttpStatus.UNAUTHORIZED);
-        }
+        return ResponseEntity.ok(memberId);
+
     }
 
     // 중복되는 코드 메서드로 분리
