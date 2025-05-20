@@ -7,6 +7,7 @@ import com.tailtales.backend.auth.util.JwtUtil;
 import com.tailtales.backend.domain.member.entity.Member;
 import com.tailtales.backend.domain.member.entity.MemberRole;
 import com.tailtales.backend.domain.member.repository.MemberRepository;
+import com.tailtales.backend.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -92,19 +93,27 @@ public class AuthService {
 
     }
 
-    // 관리자 토큰 재발급
+    // 관리자 토큰 재발급 (인증 서버)
     public AdminLoginResponseDto refreshAdminAccessToken(String refreshToken) {
-
-        // 1. refreshToken 유효성 검증
-        if (!jwtUtil.validateRefreshToken(refreshToken)) {
-            return null; // 유효하지 않은 refreshToken
+        // 1. refreshToken 유효성 검증 (JwtException을 잡아서 UnauthorizedException으로 변환)
+        try {
+            if (!jwtUtil.validateRefreshToken(refreshToken)) {
+                // validateRefreshToken이 false를 반환하는 경우 (내부에서 예외를 던지지 않는다면)
+                throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다.");
+            }
+        } catch (io.jsonwebtoken.JwtException e) {
+            // JwtUtil.validateRefreshToken 내부에서 JwtException (ExpiredJwtException 등)이 발생했을 때
+            throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다.", e);
         }
 
+
         // 2. refreshToken으로 관리자 조회
+        // NoSuchElementException 대신 UnauthorizedException을 던지도록 변경 (더 일관적)
         Member member = memberRepository.findByRefreshToken(refreshToken)
-                .orElseThrow(() -> new NoSuchElementException("유효하지 않은 Refresh Token입니다."));
+                .orElseThrow(() -> new UnauthorizedException("유효하지 않은 Refresh Token이거나 사용자를 찾을 수 없습니다."));
 
         // 3. 새로운 accessToken 생성
+        // ... (이하 동일) ...
         UserDetails userDetails = userDetailsService.loadUserByUsername(member.getId());
         String newAccessToken = jwtUtil.generateAccessToken(userDetails.getUsername(), Map.of("roles", List.of(member.getRole().name())), member.getRole());
         long newAccessTokenExpiresIn = jwtUtil.getExpirationTimeFromAccessToken(newAccessToken);

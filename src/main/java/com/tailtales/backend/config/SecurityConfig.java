@@ -2,7 +2,6 @@ package com.tailtales.backend.config;
 
 import com.tailtales.backend.auth.service.CustomUserDetailsService;
 import com.tailtales.backend.auth.util.JwtFilter;
-import com.tailtales.backend.auth.util.RefreshTokenFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,7 +22,6 @@ import static org.springframework.http.HttpMethod.POST;
 public class SecurityConfig {
 
     private final JwtFilter jwtFilter;
-    private final RefreshTokenFilter refreshTokenFilter;
     private final CustomUserDetailsService customUserDetailsService;
     private final PasswordEncoder passwordEncoder;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
@@ -43,13 +41,13 @@ public class SecurityConfig {
                 .csrf((csrf) -> csrf.disable()) // CSRF 비활성화
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                        .requestMatchers(POST, "/auth/admin/refresh").authenticated()
                         .requestMatchers(GET, "/auth/verify").authenticated()
                         .requestMatchers(POST, "/api/members").permitAll() // 회원가입
                         .requestMatchers("/auth/login").permitAll() // 로그인
                         .requestMatchers(GET, "/auth/exists/id/**").permitAll() // 아이디 중복체크
                         .requestMatchers(GET, "/auth/exists/email/**").permitAll() // 이메일 중복체크
                         .requestMatchers(POST, "/auth/findPassword/**").permitAll() // 비밀번호 찾기
+                        .requestMatchers(POST, "/auth/admin/refresh").permitAll() // 토큰값 갱신
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/members/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 나머지 요청은 인증 필요
@@ -62,7 +60,6 @@ public class SecurityConfig {
                         // .accessDeniedHandler(new JwtAccessDeniedHandler()) // 필요하다면 403 처리 핸들러 추가
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(refreshTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable())
                 .httpBasic(basic -> basic.disable());
         return http.build();
