@@ -21,7 +21,7 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
     // 아이디 조회 (모든 회원)
     @Query("SELECT m FROM Member m WHERE m.id = :id AND m.isDeleted = false")
-    Optional<Member> findById(String id);
+    Optional<Member> findById(@Param("id") String id);
 
     // 아이디 조회 (관리자)
     @Query("SELECT m FROM Member m WHERE m.id = :id AND m.role = :adminRole AND m.isDeleted = false")
@@ -37,11 +37,11 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
 
     // 이메일 조회 (사용자)
     @Query("SELECT m FROM Member m WHERE m.isDeleted = false")
-    Optional<Member> findByEmail(String email);
+    Optional<Member> findByEmail(@Param("email") String email);
 
     // providerId로 조회 (소셜 로그인 사용자)
     @Query("SELECT m FROM Member m WHERE m.providerId = :providerId AND m.isDeleted = false")
-    Optional<Member> findByProviderId(String providerId);
+    Optional<Member> findByProviderId(@Param("providerId") String providerId);
 
     // 모든 사용자 조회
     @Query("SELECT m FROM Member m WHERE m.isDeleted = false AND m.role = :userRole")
