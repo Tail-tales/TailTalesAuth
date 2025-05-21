@@ -79,19 +79,19 @@ public class MemberServiceImpl implements MemberService {
         Member.MemberBuilder memberBuilder = member.toBuilder();
         boolean changed = false;
 
-        if (dto.getName() != null && !member.getName().equals(dto.getName())) {
+        if (dto.getName() != null) {
             memberBuilder.name(dto.getName());
             changed = true;
         }
-        if (dto.getPassword() != null && !bCryptPasswordEncoder.matches(dto.getPassword(), member.getPassword())) {
+        if (dto.getPassword() != null) {
             memberBuilder.password(bCryptPasswordEncoder.encode(dto.getPassword()));
             changed = true;
         }
-        if (dto.getContact() != null && !member.getContact().equals(dto.getContact())) {
+        if (dto.getContact() != null) {
             memberBuilder.contact(dto.getContact());
             changed = true;
         }
-        if (dto.getEmail() != null && !member.getEmail().equals(dto.getEmail())) {
+        if (dto.getEmail() != null) {
             memberBuilder.email(dto.getEmail());
             changed = true;
         }

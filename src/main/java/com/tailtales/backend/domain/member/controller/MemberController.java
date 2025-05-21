@@ -54,7 +54,7 @@ public class MemberController {
     }
 
     // 관리자 개인 정보 수정
-    @PutMapping("/me")
+    @PatchMapping("/me")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> updateAdmin(@RequestBody @Valid AdminUpdateRequestDto adminUpdateRequestDto,
                                               @AuthenticationPrincipal UserDetails userDetails) {
