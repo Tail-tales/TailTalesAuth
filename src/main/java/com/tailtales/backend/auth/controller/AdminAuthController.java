@@ -2,7 +2,6 @@ package com.tailtales.backend.auth.controller;
 
 import com.tailtales.backend.auth.dto.AdminLoginRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
-import com.tailtales.backend.auth.dto.UserLoginResponseDto;
 import com.tailtales.backend.auth.service.AuthService;
 import com.tailtales.backend.auth.util.JwtUtil;
 import io.jsonwebtoken.Claims;
@@ -21,10 +20,10 @@ import java.util.NoSuchElementException;
 
 @Log4j2
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/admin/auth")
 @RequiredArgsConstructor
 @Tag(name = "Auth", description = "Authentication")
-public class AuthController {
+public class AdminAuthController {
 
     private final AuthService authService;
     private final JwtUtil jwtUtil;
@@ -122,7 +121,7 @@ public class AuthController {
     }
 
     // 관리자 토큰 갱신 요청
-    @PostMapping("/admin/refresh")
+    @PostMapping("/refresh")
     public ResponseEntity<AdminLoginResponseDto> refreshAdminAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
 
         if (refreshToken == null) {
@@ -137,36 +136,6 @@ public class AuthController {
                     .tokenType(responseDto.getTokenType())
                     .expiresIn(responseDto.getExpiresIn())
                     .id(responseDto.getId())
-                    .build());
-        } else {
-            // Refresh Token이 유효하지 않음
-            // 쿠키를 만료시켜 클라이언트에서 삭제하도록 유도
-            Cookie expiredCookie = new Cookie(COOKIE_NAME, null);
-            expiredCookie.setMaxAge(0);
-            expiredCookie.setPath("/");
-            response.addCookie(expiredCookie);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
-
-    }
-
-    // 사용자 토큰 갱신 요청
-    @PostMapping("/user/refresh")
-    public ResponseEntity<UserLoginResponseDto> refreshUserAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
-
-        if (refreshToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Refresh Token이 쿠키에 없음
-        }
-
-        UserLoginResponseDto responseDto = authService.refreshUserAccessToken(refreshToken);
-        if (responseDto != null) {
-            addRefreshTokenCookie(response, responseDto.getRefreshToken());
-            return ResponseEntity.ok(UserLoginResponseDto.builder()
-                    .accessToken(responseDto.getAccessToken())
-                    .tokenType(responseDto.getTokenType())
-                    .expiresIn(responseDto.getExpiresIn())
-                    .name(responseDto.getName())
-                    .email(responseDto.getEmail())
                     .build());
         } else {
             // Refresh Token이 유효하지 않음
@@ -195,5 +164,35 @@ public class AuthController {
         }
 
     }
+
+    // 사용자 토큰 갱신 요청
+//    @PostMapping("/refresh")
+//    public ResponseEntity<UserLoginResponseDto> refreshUserAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
+//
+//        if (refreshToken == null) {
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Refresh Token이 쿠키에 없음
+//        }
+//
+//        UserLoginResponseDto responseDto = authService.refreshUserAccessToken(refreshToken);
+//        if (responseDto != null) {
+//            addRefreshTokenCookie(response, responseDto.getRefreshToken());
+//            return ResponseEntity.ok(UserLoginResponseDto.builder()
+//                    .accessToken(responseDto.getAccessToken())
+//                    .tokenType(responseDto.getTokenType())
+//                    .expiresIn(responseDto.getExpiresIn())
+//                    .name(responseDto.getName())
+//                    .email(responseDto.getEmail())
+//                    .build());
+//        } else {
+//            // Refresh Token이 유효하지 않음
+//            // 쿠키를 만료시켜 클라이언트에서 삭제하도록 유도
+//            Cookie expiredCookie = new Cookie(COOKIE_NAME, null);
+//            expiredCookie.setMaxAge(0);
+//            expiredCookie.setPath("/");
+//            response.addCookie(expiredCookie);
+//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
+//        }
+//
+//    }
 
 }

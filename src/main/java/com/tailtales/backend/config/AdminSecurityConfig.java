@@ -5,8 +5,8 @@ import com.tailtales.backend.auth.util.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,8 +18,9 @@ import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 
 @Configuration
+@Order(1)
 @RequiredArgsConstructor
-public class SecurityConfig {
+public class AdminSecurityConfig {
 
     private final JwtFilter jwtFilter;
     private final CustomUserDetailsService customUserDetailsService;
@@ -31,25 +32,22 @@ public class SecurityConfig {
         return authenticationConfiguration.getAuthenticationManager();
     }
 
-    public void configureGlobal(AuthenticationManagerBuilder auth) throws Exception {
-        auth.userDetailsService(customUserDetailsService).passwordEncoder(passwordEncoder);
-    }
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf((csrf) -> csrf.disable()) // CSRF 비활성화
+                .securityMatcher("/api/admin/auth/**","/api/admin/**")
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                        .requestMatchers(GET, "/auth/verify").authenticated()
-                        .requestMatchers(POST, "/api/members").permitAll() // 회원가입
-                        .requestMatchers("/auth/login").permitAll() // 로그인
-                        .requestMatchers(GET, "/auth/exists/id/**").permitAll() // 아이디 중복체크
-                        .requestMatchers(GET, "/auth/exists/email/**").permitAll() // 이메일 중복체크
-                        .requestMatchers(POST, "/auth/findPassword/**").permitAll() // 비밀번호 찾기
-                        .requestMatchers(POST, "/auth/admin/refresh").permitAll() // 토큰값 갱신
+                        .requestMatchers(POST, "/api/admin").permitAll() // 회원가입
+                        .requestMatchers("/api/admin/auth/login").permitAll() // 로그인
+                        .requestMatchers(GET, "/api/admin/auth/exists/id/**").permitAll() // 아이디 중복체크
+                        .requestMatchers(GET, "/api/admin/auth/exists/email/**").permitAll() // 이메일 중복체크
+                        .requestMatchers(POST, "/api/admin/auth/findPassword/**").permitAll() // 비밀번호 찾기
+                        .requestMatchers(POST, "/api/admin/auth/refresh").permitAll() // 토큰값 갱신
                         .requestMatchers("/error").permitAll()
-                        .requestMatchers("/api/members/**").hasRole("ADMIN")
+                        .requestMatchers(GET, "/api/admin/auth/verify").authenticated()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 나머지 요청은 인증 필요
                 )
                 .sessionManagement((sessionManagement) ->

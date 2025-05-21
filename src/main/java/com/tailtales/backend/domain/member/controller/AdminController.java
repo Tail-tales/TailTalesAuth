@@ -17,19 +17,19 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Optional;
 
 @Log4j2
 @RestController
-@RequestMapping("/api/members")
+@RequestMapping("/api/admin")
 @RequiredArgsConstructor
 @Tag(name = "Member", description = "Member API")
-public class MemberController {
+public class AdminController {
 
     private final MemberService memberService;
 
     // 관리자 회원가입
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> insertAdmin(@RequestBody @Valid AdminInsertRequestDto adminInsertRequestDto) {
 
         memberService.insertAdmin(adminInsertRequestDto);
@@ -83,6 +83,34 @@ public class MemberController {
         log.info("memberId: {}", memberId);
         List<UserResponseDto> users = memberService.getUsers();
         return ResponseEntity.ok(users);
+    }
+
+    // 개별 사용자 조회
+    @GetMapping("/users/{provider}/{providerId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponseDto> getUserInfo(@PathVariable String provider,
+                                                       @PathVariable String providerId,
+                                                       @AuthenticationPrincipal UserDetails userDetails) {
+
+        String id = userDetails.getUsername();
+        log.info("memberId: {}", id);
+        Optional<UserResponseDto> userInfo = memberService.getUserInfo(provider, providerId);
+        return userInfo.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+
+    }
+
+    // 유저 계정 삭제
+    @DeleteMapping("/users/{provider}/{providerId}")
+    public ResponseEntity<String> deleteUser(@PathVariable String provider,
+                                           @PathVariable String providerId,
+                                           @AuthenticationPrincipal UserDetails userDetails) {
+
+        String id = userDetails.getUsername();
+        log.info("memberId: {}", id);
+
+        memberService.deleteUser(provider, providerId);
+        return ResponseEntity.ok("관리자 계정이 삭제되었습니다.");
+
     }
 
 }
