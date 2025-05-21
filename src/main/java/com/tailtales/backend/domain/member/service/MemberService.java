@@ -6,6 +6,7 @@ import com.tailtales.backend.domain.member.dto.AdminUpdateRequestDto;
 import com.tailtales.backend.domain.member.dto.UserResponseDto;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MemberService {
 
@@ -18,5 +19,9 @@ public interface MemberService {
     void deleteAdmin(String id);
 
     List<UserResponseDto> getUsers();
+
+    Optional<UserResponseDto> getUserInfo(String provider, String providerId);
+
+    void deleteUser(String provider, String providerId);
 
 }

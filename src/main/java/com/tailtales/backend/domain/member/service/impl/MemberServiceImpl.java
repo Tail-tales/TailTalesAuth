@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +27,7 @@ public class MemberServiceImpl implements MemberService {
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
     // 관리자 회원가입
+    @Override
     public void insertAdmin(AdminInsertRequestDto dto) {
 
         if (memberRepository.existsById(dto.getId())) {
@@ -55,6 +57,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     // 관리자 정보 조회
+    @Override
     public AdminResponseDto getAdminInfo(String id) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
@@ -71,6 +74,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     // 관리자 정보 수정
+    @Override
     public void updateAdminInfo(String id, AdminUpdateRequestDto dto) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
@@ -103,6 +107,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     // 관리자 계정 삭제
+    @Override
     public void deleteAdmin(String id) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
@@ -117,6 +122,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     // 전체 사용자 조회
+    @Override
     public List<UserResponseDto> getUsers() {
 
         List<Member> members = memberRepository.findAllNotDeleted(MemberRole.ROLE_USER);
@@ -133,6 +139,40 @@ public class MemberServiceImpl implements MemberService {
                         .imgUrl(member.getImgUrl())
                         .build())
                 .collect(Collectors.toList());
+
+    }
+
+    // 개별 사용자 조회
+    @Override
+    public Optional<UserResponseDto> getUserInfo(String provider, String providerId) {
+
+        return memberRepository.findByProviderAndProviderId(provider, providerId)
+                .map(member -> UserResponseDto.builder()
+                        .provider(member.getProvider())
+                        .providerId(member.getProviderId())
+                        .name(member.getName())
+                        .email(member.getEmail())
+                        .contact(member.getContact())
+                        .role(member.getRole().toString())
+                        .createdAt(member.getCreatedAt())
+                        .level(member.getLevel().toString())
+                        .imgUrl(member.getImgUrl())
+                        .build());
+
+    }
+
+    // 유저 탈퇴 처리
+    @Override
+    public void deleteUser(String provider, String providerId) {
+
+        Member member = memberRepository.findByProviderAndProviderId(provider, providerId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 사용자를 찾을 수 없습니다."));
+
+        member = member.toBuilder()
+                .deletedAt(LocalDateTime.now())
+                .isDeleted(true)
+                .build();
+        memberRepository.save(member);
 
     }
 
