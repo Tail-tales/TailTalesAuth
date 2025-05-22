@@ -1,6 +1,7 @@
 package com.tailtales.backend.config;
 
 import com.tailtales.backend.auth.service.CustomUserDetailsService;
+import com.tailtales.backend.auth.util.JwtAuthenticationEntryPoint;
 import com.tailtales.backend.auth.util.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -45,7 +46,7 @@ public class AdminSecurityConfig {
                         .requestMatchers(GET, "/api/admin/auth/exists/email/**").permitAll() // 이메일 중복체크
                         .requestMatchers(POST, "/api/admin/auth/findPassword/**").permitAll() // 비밀번호 찾기
                         .requestMatchers(POST, "/api/admin/auth/refresh").permitAll() // 토큰값 갱신
-                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/error/**").permitAll()
                         .requestMatchers(GET, "/api/admin/auth/verify").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 나머지 요청은 인증 필요
@@ -53,9 +54,9 @@ public class AdminSecurityConfig {
                 .sessionManagement((sessionManagement) ->
                         sessionManagement.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS) // 세션 사용 안 함
                 )
-                .exceptionHandling(exception -> exception // 추가
-                                .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 401 처리
-                        // .accessDeniedHandler(new JwtAccessDeniedHandler()) // 필요하다면 403 처리 핸들러 추가
+                .exceptionHandling(exceptionHandling ->
+                        exceptionHandling
+                                .authenticationEntryPoint(jwtAuthenticationEntryPoint) // 이 부분 추가
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
                 .formLogin(form -> form.disable())

@@ -2,7 +2,6 @@ package com.tailtales.backend.auth.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tailtales.backend.auth.service.CustomUserDetailsService;
-import com.tailtales.backend.config.JwtAuthenticationEntryPoint;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

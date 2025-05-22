@@ -32,7 +32,7 @@ public interface MemberRepository extends JpaRepository<Member, Integer> {
     Optional<Member> findByRefreshToken(@Param("refreshToken") String refreshToken);
 
     // 아이디 조회 (사용자)
-    @Query("SELECT m FROM Member m WHERE m.provider = :provider AND m.providerId = :providerId AND m.isDeleted = false")
+    @Query("SELECT m FROM Member m WHERE m.provider = :provider AND m.providerId = :providerId")
     Optional<Member> findByProviderAndProviderId(@Param("provider") String provider, @Param("providerId") String providerId);
 
     // 이메일 조회 (사용자)

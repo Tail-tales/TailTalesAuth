@@ -1,5 +1,7 @@
 package com.tailtales.backend.domain.member.service.impl;
 
+import com.tailtales.backend.common.enumType.ErrorCode;
+import com.tailtales.backend.common.exception.CustomException;
 import com.tailtales.backend.domain.member.dto.AdminInsertRequestDto;
 import com.tailtales.backend.domain.member.dto.AdminResponseDto;
 import com.tailtales.backend.domain.member.dto.AdminUpdateRequestDto;
@@ -31,15 +33,11 @@ public class MemberServiceImpl implements MemberService {
     public void insertAdmin(AdminInsertRequestDto dto) {
 
         if (memberRepository.existsById(dto.getId())) {
-
-            throw new IllegalArgumentException("이미 사용 중인 아이디입니다.");
-
+            throw new CustomException(ErrorCode.DUPLICATE_USERNAME);
         }
 
         if (memberRepository.existsByEmail(dto.getEmail())) {
-
-            throw new IllegalArgumentException("이미 사용 중인 이메일입니다.");
-
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
         }
 
         Member member = Member.builder()
@@ -61,7 +59,7 @@ public class MemberServiceImpl implements MemberService {
     public AdminResponseDto getAdminInfo(String id) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
-                .orElseThrow(() -> new IllegalArgumentException("해당 관리자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USERNAME_NOT_FOUND));
 
         return AdminResponseDto.builder()
                 .name(member.getName())
@@ -78,7 +76,7 @@ public class MemberServiceImpl implements MemberService {
     public void updateAdminInfo(String id, AdminUpdateRequestDto dto) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
-                .orElseThrow(() -> new IllegalArgumentException("해당 관리자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USERNAME_NOT_FOUND));
 
         Member.MemberBuilder memberBuilder = member.toBuilder();
         boolean changed = false;
@@ -96,6 +94,12 @@ public class MemberServiceImpl implements MemberService {
             changed = true;
         }
         if (dto.getEmail() != null) {
+            // 변경하려는 이메일이 현재 회원의 이메일과 다를 때만 중복 체크
+            if (!dto.getEmail().equals(member.getEmail())) {
+                if (memberRepository.existsByEmail(dto.getEmail())) {
+                    throw new CustomException(ErrorCode.EMAIL_IN_USE);
+                }
+            }
             memberBuilder.email(dto.getEmail());
             changed = true;
         }
@@ -111,7 +115,7 @@ public class MemberServiceImpl implements MemberService {
     public void deleteAdmin(String id) {
 
         Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
-                .orElseThrow(() -> new IllegalArgumentException("해당 관리자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.USERNAME_NOT_FOUND));
 
         member = member.toBuilder()
                 .deletedAt(LocalDateTime.now())
@@ -146,18 +150,29 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public Optional<UserResponseDto> getUserInfo(String provider, String providerId) {
 
-        return memberRepository.findByProviderAndProviderId(provider, providerId)
-                .map(member -> UserResponseDto.builder()
-                        .provider(member.getProvider())
-                        .providerId(member.getProviderId())
-                        .name(member.getName())
-                        .email(member.getEmail())
-                        .contact(member.getContact())
-                        .role(member.getRole().toString())
-                        .createdAt(member.getCreatedAt())
-                        .level(member.getLevel().toString())
-                        .imgUrl(member.getImgUrl())
-                        .build());
+        Optional<Member> memberOptional = memberRepository.findByProviderAndProviderId(provider, providerId);
+
+        if (memberOptional.isEmpty()) {
+            throw new CustomException(ErrorCode.PROVIDER_OR_ID_MISMATCH);
+        }
+
+        Member member = memberOptional.get();
+
+        if (member.isDeleted()) {
+            throw new CustomException(ErrorCode.ALREADY_DEACTIVATED_USER);
+        }
+
+        return Optional.of(UserResponseDto.builder()
+                .provider(member.getProvider())
+                .providerId(member.getProviderId())
+                .name(member.getName())
+                .email(member.getEmail())
+                .contact(member.getContact())
+                .role(member.getRole().toString())
+                .createdAt(member.getCreatedAt())
+                .level(member.getLevel().toString())
+                .imgUrl(member.getImgUrl())
+                .build());
 
     }
 
@@ -166,7 +181,11 @@ public class MemberServiceImpl implements MemberService {
     public void deleteUser(String provider, String providerId) {
 
         Member member = memberRepository.findByProviderAndProviderId(provider, providerId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.PROVIDER_OR_ID_MISMATCH));
+
+        if (member.isDeleted()) {
+            throw new CustomException(ErrorCode.ALREADY_DEACTIVATED_USER);
+        }
 
         member = member.toBuilder()
                 .deletedAt(LocalDateTime.now())

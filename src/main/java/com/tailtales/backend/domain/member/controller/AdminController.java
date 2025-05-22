@@ -1,5 +1,7 @@
 package com.tailtales.backend.domain.member.controller;
 
+import com.tailtales.backend.common.enumType.ErrorCode;
+import com.tailtales.backend.common.exception.CustomException;
 import com.tailtales.backend.domain.member.dto.AdminInsertRequestDto;
 import com.tailtales.backend.domain.member.dto.AdminResponseDto;
 import com.tailtales.backend.domain.member.dto.AdminUpdateRequestDto;
@@ -9,7 +11,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -45,7 +46,7 @@ public class AdminController {
 
         String loggedInAdminId = userDetails.getUsername();
         if (!loggedInAdminId.equals(id)) {
-            return new ResponseEntity<>(HttpStatus.FORBIDDEN); // 접근 거부 (403 Forbidden)
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
         }
 
         AdminResponseDto adminResponseDto = memberService.getAdminInfo(id);
@@ -88,15 +89,16 @@ public class AdminController {
     // 개별 사용자 조회
     @GetMapping("/users/{provider}/{providerId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserResponseDto> getUserInfo(@PathVariable String provider,
+    public ResponseEntity<UserResponseDto> getUserInfo(@PathVariable String provider, // Optional 제거
                                                        @PathVariable String providerId,
                                                        @AuthenticationPrincipal UserDetails userDetails) {
 
         String id = userDetails.getUsername();
         log.info("memberId: {}", id);
-        Optional<UserResponseDto> userInfo = memberService.getUserInfo(provider, providerId);
-        return userInfo.map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
 
+        Optional<UserResponseDto> userInfoOptional = memberService.getUserInfo(provider, providerId);
+
+        return ResponseEntity.ok(userInfoOptional.get());
     }
 
     // 유저 계정 삭제

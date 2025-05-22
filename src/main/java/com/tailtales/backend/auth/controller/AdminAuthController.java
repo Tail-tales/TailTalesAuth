@@ -4,19 +4,18 @@ import com.tailtales.backend.auth.dto.AdminLoginRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.service.AuthService;
 import com.tailtales.backend.auth.util.JwtUtil;
+import com.tailtales.backend.common.enumType.ErrorCode;
+import com.tailtales.backend.common.exception.CustomException;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.NoSuchElementException;
 
 @Log4j2
 @RestController
@@ -38,7 +37,7 @@ public class AdminAuthController {
 
         if (authentication == null || !authentication.isAuthenticated()) {
             log.warn("/auth/verify 엔드포인트에 인증되지 않은 요청이 도달했습니다.");
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("인증된 사용자 정보가 없습니다.");
+            throw new CustomException(ErrorCode.UNAUTHORIZED);
         }
 
         String memberId = authentication.getName();
@@ -58,18 +57,18 @@ public class AdminAuthController {
 
     // 관리자 아이디 중복 체크
     @GetMapping("/exists/id/{id}")
-    public ResponseEntity<Boolean> checkDuplicateId(@PathVariable(name = "id") String id) {
+    public ResponseEntity<Void> checkDuplicateId(@PathVariable(name = "id") String id) {
 
-        boolean isDuplicate = authService.isDuplicateId(id);
-        return ResponseEntity.ok(isDuplicate);
+        authService.isDuplicateId(id);
+        return ResponseEntity.ok().build();
 
     }
 
     // 관리자 이메일 중복 체크
     @GetMapping("/exists/email/{email}")
-    public ResponseEntity<Boolean> checkDuplicateEmail(@PathVariable(name = "email") String email) {
-        boolean isDuplicate = authService.isDuplicateEmail(email);
-        return ResponseEntity.ok(isDuplicate);
+    public ResponseEntity<Void> checkDuplicateEmail(@PathVariable(name = "email") String email) {
+        authService.isDuplicateEmail(email);
+        return ResponseEntity.ok().build();
     }
 
     // 관리자 로그인
@@ -77,17 +76,14 @@ public class AdminAuthController {
     public ResponseEntity<AdminLoginResponseDto> login(@RequestBody AdminLoginRequestDto requestDto, HttpServletResponse response) {
 
         AdminLoginResponseDto responseDto = authService.login(requestDto.getId(), requestDto.getPassword());
-        if (responseDto != null) {
-            addRefreshTokenCookie(response, responseDto.getRefreshToken());
-            return ResponseEntity.ok(AdminLoginResponseDto.builder()
-                    .accessToken(responseDto.getAccessToken())
-                    .tokenType(responseDto.getTokenType())
-                    .expiresIn(responseDto.getExpiresIn())
-                    .id(responseDto.getId())
-                    .build());
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Unauthorized (인증되지 않음)
-        }
+
+        addRefreshTokenCookie(response, responseDto.getRefreshToken());
+        return ResponseEntity.ok(AdminLoginResponseDto.builder()
+                .accessToken(responseDto.getAccessToken())
+                .tokenType(responseDto.getTokenType())
+                .expiresIn(responseDto.getExpiresIn())
+                .id(responseDto.getId())
+                .build());
 
     }
 
@@ -97,27 +93,31 @@ public class AdminAuthController {
                                        HttpServletResponse response) {
 
         String token = jwtUtil.extractTokenFromHeader(authorizationHeader);
-        if (token != null) {
-            Claims claims = jwtUtil.getClaimsFromToken(token);
-            if (claims != null) {
-                String memberId = claims.getSubject();
-                try {
-                    authService.logout(memberId);
-
-                    // refreshToken 쿠키 삭제
-                    Cookie cookie = new Cookie(COOKIE_NAME, null);
-                    cookie.setHttpOnly(true);
-                    cookie.setMaxAge(0); // 즉시 만료
-                    cookie.setPath("/");
-                    response.addCookie(cookie);
-
-                    return ResponseEntity.ok().build();
-                } catch (NoSuchElementException e) {
-                    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-                }
-            }
+        if (token == null) {
+            throw new CustomException(ErrorCode.EMPTY_ACCESS_TOKEN);
         }
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+
+        Claims claims;
+        try {
+            claims = jwtUtil.getClaimsFromToken(token);
+
+        } catch (io.jsonwebtoken.JwtException e) {
+
+            throw new CustomException(ErrorCode.INVALID_ACCESS_TOKEN);
+        }
+
+        String memberId = claims.getSubject();
+        authService.logout(memberId);
+
+        // refreshToken 쿠키 삭제
+        Cookie cookie = new Cookie(COOKIE_NAME, null);
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0); // 즉시 만료
+        cookie.setPath("/");
+        response.addCookie(cookie);
+
+        return ResponseEntity.ok().build();
+
     }
 
     // 관리자 토큰 갱신 요청
@@ -125,27 +125,18 @@ public class AdminAuthController {
     public ResponseEntity<AdminLoginResponseDto> refreshAdminAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
 
         if (refreshToken == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Refresh Token이 쿠키에 없음
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
         AdminLoginResponseDto responseDto = authService.refreshAdminAccessToken(refreshToken);
-        if (responseDto != null) {
-            addRefreshTokenCookie(response, responseDto.getRefreshToken());
-            return ResponseEntity.ok(AdminLoginResponseDto.builder()
-                    .accessToken(responseDto.getAccessToken())
-                    .tokenType(responseDto.getTokenType())
-                    .expiresIn(responseDto.getExpiresIn())
-                    .id(responseDto.getId())
-                    .build());
-        } else {
-            // Refresh Token이 유효하지 않음
-            // 쿠키를 만료시켜 클라이언트에서 삭제하도록 유도
-            Cookie expiredCookie = new Cookie(COOKIE_NAME, null);
-            expiredCookie.setMaxAge(0);
-            expiredCookie.setPath("/");
-            response.addCookie(expiredCookie);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-        }
+
+        addRefreshTokenCookie(response, responseDto.getRefreshToken());
+        return ResponseEntity.ok(AdminLoginResponseDto.builder()
+                .accessToken(responseDto.getAccessToken())
+                .tokenType(responseDto.getTokenType())
+                .expiresIn(responseDto.getExpiresIn())
+                .id(responseDto.getId())
+                .build());
 
     }
 
@@ -153,46 +144,9 @@ public class AdminAuthController {
     @PostMapping("/findPassword")
     public ResponseEntity<String> findPassword(@RequestParam(name = "id") String id) {
 
-        try {
-            authService.sendMail(id);
-            return ResponseEntity.ok("새로운 비밀번호를 해당 관리자의 이메일로 발송했습니다.");
-        } catch (NoSuchElementException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            log.error(e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("새로운 비밀번호 발송에 실패했습니다.");
-        }
+        authService.sendMail(id);
+        return ResponseEntity.ok("새로운 비밀번호를 해당 관리자의 이메일로 발송했습니다.");
 
     }
-
-    // 사용자 토큰 갱신 요청
-//    @PostMapping("/refresh")
-//    public ResponseEntity<UserLoginResponseDto> refreshUserAccessToken(@CookieValue(value = COOKIE_NAME, required = false) String refreshToken, HttpServletResponse response) {
-//
-//        if (refreshToken == null) {
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null); // Refresh Token이 쿠키에 없음
-//        }
-//
-//        UserLoginResponseDto responseDto = authService.refreshUserAccessToken(refreshToken);
-//        if (responseDto != null) {
-//            addRefreshTokenCookie(response, responseDto.getRefreshToken());
-//            return ResponseEntity.ok(UserLoginResponseDto.builder()
-//                    .accessToken(responseDto.getAccessToken())
-//                    .tokenType(responseDto.getTokenType())
-//                    .expiresIn(responseDto.getExpiresIn())
-//                    .name(responseDto.getName())
-//                    .email(responseDto.getEmail())
-//                    .build());
-//        } else {
-//            // Refresh Token이 유효하지 않음
-//            // 쿠키를 만료시켜 클라이언트에서 삭제하도록 유도
-//            Cookie expiredCookie = new Cookie(COOKIE_NAME, null);
-//            expiredCookie.setMaxAge(0);
-//            expiredCookie.setPath("/");
-//            response.addCookie(expiredCookie);
-//            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
-//        }
-//
-//    }
 
 }

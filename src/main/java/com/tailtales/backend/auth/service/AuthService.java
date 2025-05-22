@@ -2,14 +2,15 @@ package com.tailtales.backend.auth.service;
 
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.dto.MailResponseDto;
-import com.tailtales.backend.auth.dto.UserLoginResponseDto;
 import com.tailtales.backend.auth.util.JwtUtil;
+import com.tailtales.backend.common.enumType.ErrorCode;
+import com.tailtales.backend.common.exception.CustomException;
 import com.tailtales.backend.domain.member.entity.Member;
 import com.tailtales.backend.domain.member.entity.MemberRole;
 import com.tailtales.backend.domain.member.repository.MemberRepository;
-import com.tailtales.backend.exception.UnauthorizedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.NoSuchElementException;
 import java.util.UUID;
 
 @Service
@@ -36,24 +36,38 @@ public class AuthService {
     private final SimpleMailMessageService simpleMailMessageService;
 
     // 관리자 아이디 중복체크
-    public boolean isDuplicateId(String id) { return memberRepository.existsById(id); }
+    public void isDuplicateId(String id) {
+        if (memberRepository.existsById(id)) {
+            throw new CustomException(ErrorCode.DUPLICATE_USERNAME);
+        }
+    }
 
     // 관리자, 사용자 이메일 중복체크
-    public boolean isDuplicateEmail(String email) { return memberRepository.existsByEmail(email); }
+    public void isDuplicateEmail(String email) {
+        if (memberRepository.existsByEmail(email)) {
+            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
+        }
+    }
 
     // 관리자 로그인
     public AdminLoginResponseDto login(String id, String password) {
 
-        // 사용자 인증 (AuthenticationManager 사용)
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(id, password)
-        );
+        try {
 
-        // 인증 성공 시 JWT 토큰 생성
-        if (authentication.isAuthenticated()) {
-            UserDetails userDetails = userDetailsService.loadUserByUsername(id);
-            Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
-                    .orElseThrow(() -> new NoSuchElementException("해당 아이디의 회원을 찾을 수 없습니다."));
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(id, password)
+            );
+
+            // 인증 성공 시 JWT 토큰 생성
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            Member member = memberRepository.findById(id)
+                    .orElseThrow(() -> new CustomException(ErrorCode.USERNAME_NOT_FOUND));
+
+            if (member.getRole() != MemberRole.ROLE_ADMIN) {
+                throw new CustomException(ErrorCode.ACCESS_DENIED);
+            }
+
             String accessToken = jwtUtil.generateAccessToken(userDetails.getUsername(), Map.of("roles", List.of(member.getRole().name())), member.getRole());
             String refreshToken = jwtUtil.generateRefreshToken();
 
@@ -74,16 +88,26 @@ public class AuthService {
                     .refreshExpiresIn(refreshTokenExpiresIn / 1000) // 초 단위로 변환
                     .id(id)
                     .build();
+
+        } catch (BadCredentialsException e) {
+
+            throw new CustomException(ErrorCode.INVALID_CREDENTIALS);
+        } catch (org.springframework.security.core.userdetails.UsernameNotFoundException e) {
+
+            throw new CustomException(ErrorCode.USERNAME_NOT_FOUND);
         }
 
-        return null; // 인증 실패
     }
 
     // 관리자 로그아웃
     public void logout(String id) {
 
-        Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
-                .orElseThrow(() -> new NoSuchElementException("해당 아이디의 관리자를 찾을 수 없습니다."));
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ErrorCode.USERNAME_NOT_FOUND));
+
+        if (member.getRole() != MemberRole.ROLE_ADMIN) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
 
         Member updatedMember = member.toBuilder()
                 .refreshToken(null)
@@ -95,25 +119,25 @@ public class AuthService {
 
     // 관리자 토큰 재발급 (인증 서버)
     public AdminLoginResponseDto refreshAdminAccessToken(String refreshToken) {
-        // 1. refreshToken 유효성 검증 (JwtException을 잡아서 UnauthorizedException으로 변환)
+
         try {
             if (!jwtUtil.validateRefreshToken(refreshToken)) {
-                // validateRefreshToken이 false를 반환하는 경우 (내부에서 예외를 던지지 않는다면)
-                throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다.");
+                throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
             }
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            throw new CustomException(ErrorCode.REFRESH_TOKEN_EXPIRED);
         } catch (io.jsonwebtoken.JwtException e) {
-            // JwtUtil.validateRefreshToken 내부에서 JwtException (ExpiredJwtException 등)이 발생했을 때
-            throw new UnauthorizedException("유효하지 않거나 만료된 Refresh Token입니다.", e);
+            throw new CustomException(ErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-
-        // 2. refreshToken으로 관리자 조회
-        // NoSuchElementException 대신 UnauthorizedException을 던지도록 변경 (더 일관적)
         Member member = memberRepository.findByRefreshToken(refreshToken)
-                .orElseThrow(() -> new UnauthorizedException("유효하지 않은 Refresh Token이거나 사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new CustomException(ErrorCode.INVALID_REFRESH_TOKEN));
+
+        if (member.getRole() != MemberRole.ROLE_ADMIN) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
 
         // 3. 새로운 accessToken 생성
-        // ... (이하 동일) ...
         UserDetails userDetails = userDetailsService.loadUserByUsername(member.getId());
         String newAccessToken = jwtUtil.generateAccessToken(userDetails.getUsername(), Map.of("roles", List.of(member.getRole().name())), member.getRole());
         long newAccessTokenExpiresIn = jwtUtil.getExpirationTimeFromAccessToken(newAccessToken);
@@ -127,41 +151,14 @@ public class AuthService {
                 .build();
     }
 
-    // 사용자 토큰 재발급
-    public UserLoginResponseDto refreshUserAccessToken(String refreshToken) {
-
-        // 1. refreshToken 유효성 검증
-        if (!jwtUtil.validateRefreshToken(refreshToken)) {
-            return null; // 유효하지 않은 refreshToken
-        }
-
-        // 2. refreshToken으로 사용자 조회
-        Member member = memberRepository.findByRefreshToken(refreshToken)
-                .orElseThrow(() -> new NoSuchElementException("유효하지 않은 Refresh Token입니다."));
-
-        // 3. 새로운 accessToken 생성
-        String newAccessToken = jwtUtil.generateAccessToken(
-                member.getProviderId(),
-                Map.of("name", member.getName(), "email", member.getEmail()), // claims
-                member.getRole()
-        );
-        long newAccessTokenExpiresIn = jwtUtil.getExpirationTimeFromAccessToken(newAccessToken);
-        long refreshTokenExpiresIn = jwtUtil.getExpirationTimeFromRefreshToken(refreshToken); // 기존 refreshToken 만료 시간 유지
-
-        return UserLoginResponseDto.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(refreshToken)
-                .expiresIn(newAccessTokenExpiresIn / 1000)
-                .refreshExpiresIn(refreshTokenExpiresIn / 1000)
-                .name(member.getName())
-                .email(member.getEmail())
-                .build();
-    }
-
     // 관리자 비밀번호 찾기
     public void sendMail(String id) {
-        Member member = memberRepository.findById(id, MemberRole.ROLE_ADMIN)
-                .orElseThrow(() -> new NoSuchElementException("해당 아이디의 관리자를 찾을 수 없습니다."));
+        Member member = memberRepository.findById(id)
+                .orElseThrow(() -> new CustomException(ErrorCode.USERNAME_NOT_FOUND));
+
+        if (member.getRole() != MemberRole.ROLE_ADMIN) {
+            throw new CustomException(ErrorCode.ACCESS_DENIED);
+        }
 
         // 1. 임시 비밀번호 생성
         String newPassword = generateRandomPassword();
