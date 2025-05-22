@@ -6,10 +6,14 @@ import com.tailtales.backend.common.exception.CustomException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @Log4j2
 @RestControllerAdvice
@@ -32,15 +36,22 @@ public class CustomExceptionHandler {
     public ResponseEntity<ErrorDto> handleMethodArgumentNotValidException(MethodArgumentNotValidException e) {
 
         String defaultMessage = e.getBindingResult().getFieldError() != null ?
-                e.getBindingResult().getFieldError().getDefaultMessage() : "유효하지 않은 입력값입니다.";
-        log.warn("유효성 검사 실패: {}", defaultMessage);
+                e.getBindingResult().getFieldError().getDefaultMessage() : ErrorCode.INVALID_INPUT_VALUE.getMessage(); // ⭐️ 기본 메시지도 ErrorCode에서 가져오는 것을 고려
+
+        Map<String, String> errors = new HashMap<>();
+        e.getBindingResult().getAllErrors().forEach(error -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        log.warn("유효성 검사 실패: {}", errors);
 
         ErrorDto errorDto = ErrorDto.builder()
-                .code(ErrorCode.INVALID_SIGNUP_FORMAT.getCode()) // 또는 ErrorCode.NULL_VALUE 등 더 적절한 코드 사용
+                .code(ErrorCode.INVALID_INPUT_VALUE.getCode())
                 .message(defaultMessage)
                 .build();
 
-        return new ResponseEntity<>(errorDto, HttpStatus.BAD_REQUEST);
+        return new ResponseEntity<>(errorDto, ErrorCode.INVALID_INPUT_VALUE.getStatus());
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)

@@ -6,6 +6,9 @@ import org.springframework.http.HttpStatus;
 @Getter
 public enum ErrorCode {
 
+    // ⛔️ 일반 유효성 검사
+    INVALID_INPUT_VALUE("V001", "입력 값이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
+
     // 🔐 권한
     ACCESS_DENIED("A001", "접근이 거부되었습니다.", HttpStatus.FORBIDDEN),
     UNAUTHORIZED("A002", "인증 정보가 없습니다.", HttpStatus.UNAUTHORIZED),
@@ -48,7 +51,7 @@ public enum ErrorCode {
     // 📄 게시글 처리
     POST_NULL_VALUE("P001", "게시글 내용이 비어 있습니다.", HttpStatus.BAD_REQUEST),
     POST_TOO_LONG("P002", "게시글 내용이 너무 깁니다.", HttpStatus.BAD_REQUEST),
-    CATEGORY_NOT_FOUND("P003", "해당 카테고리가 존재하지 않습니다.", HttpStatus.NOT_FOUND),
+    POST_CATEGORY_NOT_FOUND("P003", "해당 카테고리가 존재하지 않습니다.", HttpStatus.NOT_FOUND),
     FILE_SIZE_EXCEEDED("P004", "첨부파일 크기 제한을 초과했습니다.", HttpStatus.PAYLOAD_TOO_LARGE),
     UNSUPPORTED_FILE_TYPE("P005", "지원하지 않는 파일 형식입니다.", HttpStatus.UNSUPPORTED_MEDIA_TYPE),
     POST_NOT_FOUND("P006", "해당 게시글이 존재하지 않습니다.", HttpStatus.NOT_FOUND),
@@ -58,7 +61,9 @@ public enum ErrorCode {
     DUPLICATE_CATEGORY("CA001", "이미 존재하는 카테고리입니다.", HttpStatus.CONFLICT),
     INVALID_CATEGORY_NAME("CA002", "카테고리 이름이 유효하지 않습니다.", HttpStatus.BAD_REQUEST),
     CATEGORY_CONTAINS_POSTS("CA003", "하위 게시글이 존재하는 카테고리는 삭제할 수 없습니다.", HttpStatus.CONFLICT),
-    CATEGORY_NOT_FOUND_DELETE("CA004", "삭제하려는 카테고리가 존재하지 않습니다.", HttpStatus.NOT_FOUND),
+    CATEGORY_NOT_FOUND("CA004", "카테고리가 존재하지 않습니다.", HttpStatus.NOT_FOUND),
+    NOT_SUPPORTED_METHOD("CA005", "지원하지 않는 작업 유형입니다.", HttpStatus.BAD_REQUEST),
+    CATEGORY_FILED_REQUIRED("CA006", "게시글 카테고리는 필수입니다.", HttpStatus.BAD_REQUEST),
 
     // 🛠 서버
     INTERNAL_SERVER_ERROR("S001", "서버 내부 오류가 발생했습니다.", HttpStatus.INTERNAL_SERVER_ERROR),
