@@ -36,18 +36,10 @@ public class AuthService {
     private final SimpleMailMessageService simpleMailMessageService;
 
     // 관리자 아이디 중복체크
-    public void isDuplicateId(String id) {
-        if (memberRepository.existsById(id)) {
-            throw new CustomException(ErrorCode.DUPLICATE_USERNAME);
-        }
-    }
+    public boolean isDuplicateId(String id) { return memberRepository.existsById(id); }
 
     // 관리자, 사용자 이메일 중복체크
-    public void isDuplicateEmail(String email) {
-        if (memberRepository.existsByEmail(email)) {
-            throw new CustomException(ErrorCode.DUPLICATE_EMAIL);
-        }
-    }
+    public boolean isDuplicateEmail(String email) { return memberRepository.existsByEmail(email); }
 
     // 관리자 로그인
     public AdminLoginResponseDto login(String id, String password) {

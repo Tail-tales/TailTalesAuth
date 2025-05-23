@@ -57,18 +57,18 @@ public class AdminAuthController {
 
     // 관리자 아이디 중복 체크
     @GetMapping("/exists/id/{id}")
-    public ResponseEntity<Void> checkDuplicateId(@PathVariable(name = "id") String id) {
+    public ResponseEntity<Boolean> checkDuplicateId(@PathVariable(name = "id") String id) {
 
-        authService.isDuplicateId(id);
-        return ResponseEntity.ok().build();
+        boolean isDuplicate = authService.isDuplicateId(id);
+        return ResponseEntity.ok(isDuplicate);
 
     }
 
     // 관리자 이메일 중복 체크
     @GetMapping("/exists/email/{email}")
-    public ResponseEntity<Void> checkDuplicateEmail(@PathVariable(name = "email") String email) {
-        authService.isDuplicateEmail(email);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<Boolean> checkDuplicateEmail(@PathVariable(name = "email") String email) {
+        boolean isDuplicate = authService.isDuplicateEmail(email);
+        return ResponseEntity.ok(isDuplicate);
     }
 
     // 관리자 로그인
