@@ -17,9 +17,11 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import static com.tailtales.backend.common.constants.ApiConstants.*;
+
 @Log4j2
 @RestController
-@RequestMapping("/api/admin/auth")
+@RequestMapping(ADMIN_AUTH_BASE_URL)
 @RequiredArgsConstructor
 @Tag(name = "Auth", description = "Authentication")
 public class AdminAuthController {

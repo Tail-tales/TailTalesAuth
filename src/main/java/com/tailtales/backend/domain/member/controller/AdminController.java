@@ -20,9 +20,11 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
+import static com.tailtales.backend.common.constants.ApiConstants.*;
+
 @Log4j2
 @RestController
-@RequestMapping("/api/admin")
+@RequestMapping(ADMIN_BASE_URL)
 @RequiredArgsConstructor
 @Tag(name = "Member", description = "Member API")
 public class AdminController {
@@ -103,6 +105,7 @@ public class AdminController {
 
     // 유저 계정 삭제
     @DeleteMapping("/users/{provider}/{providerId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<String> deleteUser(@PathVariable String provider,
                                            @PathVariable String providerId,
                                            @AuthenticationPrincipal UserDetails userDetails) {

@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsUtils;
+import static com.tailtales.backend.common.constants.ApiConstants.*;
 
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
@@ -35,20 +36,29 @@ public class AdminSecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
+        final String[] POST_WHITE_LIST = {
+                ADMIN_REGISTER,
+                ADMIN_LOGIN,
+                ADMIN_TOKEN_REFRESH,
+                ADMIN_FIND_PASSWORD + "/**"
+        };
+
+        final String[] GET_WHITE_LIST = {
+                ADMIN_CHECK_ID + "/**",
+                ADMIN_CHECK_EMAIL + "/**"
+        };
+
         http
                 .csrf((csrf) -> csrf.disable()) // CSRF 비활성화
-                .securityMatcher("/api/admin/auth/**","/api/admin/**")
+                .securityMatcher(ADMIN_AUTH_BASE_URL +"/**", ADMIN_BASE_URL + "/**")
                 .authorizeHttpRequests((auth) -> auth
                         .requestMatchers(CorsUtils::isPreFlightRequest).permitAll()
-                        .requestMatchers(POST, "/api/admin").permitAll() // 회원가입
-                        .requestMatchers("/api/admin/auth/login").permitAll() // 로그인
-                        .requestMatchers(GET, "/api/admin/auth/exists/id/**").permitAll() // 아이디 중복체크
-                        .requestMatchers(GET, "/api/admin/auth/exists/email/**").permitAll() // 이메일 중복체크
-                        .requestMatchers(POST, "/api/admin/auth/findPassword/**").permitAll() // 비밀번호 찾기
-                        .requestMatchers(POST, "/api/admin/auth/refresh").permitAll() // 토큰값 갱신
-                        .requestMatchers("/error/**").permitAll()
-                        .requestMatchers(GET, "/api/admin/auth/verify").authenticated()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers(POST, POST_WHITE_LIST).permitAll()
+                        .requestMatchers(GET, GET_WHITE_LIST).permitAll()
+                        .requestMatchers(ERROR_URL + "/**").permitAll()
+                        .requestMatchers(GET, ADMIN_VERIFY_TOKEN).authenticated()
+                        .requestMatchers(ADMIN_BASE_URL + "/**").hasRole("ADMIN")
                         .anyRequest().authenticated() // 나머지 요청은 인증 필요
                 )
                 .sessionManagement((sessionManagement) ->

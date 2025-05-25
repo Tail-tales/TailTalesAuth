@@ -13,6 +13,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsUtils;
+import static com.tailtales.backend.common.constants.ApiConstants.*;
 
 @Configuration
 @Order(2)
@@ -26,10 +27,10 @@ public class UserSecurityConfig {
     public SecurityFilterChain userSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .securityMatcher("/api/user/**", "/oauth2/**", "/login/oauth2/code/**")
+                .securityMatcher(USER_BASE_URL + "/**", USER_LOGIN + "/**", USER_LOGIN_CALLBACK + "/**")
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(CorsUtils::isPreFlightRequest).permitAll();
-                    auth.requestMatchers("/oauth2/**", "/login/oauth2/code/**").permitAll();
+                    auth.requestMatchers(USER_LOGIN + "/**", USER_LOGIN_CALLBACK + "/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
