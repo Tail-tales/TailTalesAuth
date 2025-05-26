@@ -3,9 +3,9 @@ spring:
     name: auth
 
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:13306}/${DB_NAME}?useSSL=false&serverTimezone=UTC
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver
 
     hikari:
@@ -81,6 +81,10 @@ jwt:
   refresh-secret-key: ${JWT_REFRESH_SECRET_KEY}
   access-token-validity-seconds: 3600  #1hour
   refresh-token-validity-seconds: 604800 #7days
+
+admin:
+  server:
+    url: ${ADMIN_SERVER_URL:http://localhost:8080}
 
 logging:
   level:
