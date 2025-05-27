@@ -1,8 +1,8 @@
 package com.tailtales.backend.auth.util;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.tailtales.backend.common.dto.ErrorDto;
-import com.tailtales.backend.common.enumType.ErrorCode;
+import com.tailtales.backend.error.dto.ErrorDto;
+import com.tailtales.backend.error.enumType.ErrorCode;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.ServletException;

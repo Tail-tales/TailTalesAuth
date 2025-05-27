@@ -1,4 +1,4 @@
-package com.tailtales.backend.common.enumType;
+package com.tailtales.backend.error.enumType;
 
 import lombok.Getter;
 import org.springframework.http.HttpStatus;

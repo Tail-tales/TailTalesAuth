@@ -1,8 +1,8 @@
-package com.tailtales.backend.common.handler;
+package com.tailtales.backend.error.handler;
 
-import com.tailtales.backend.common.dto.ErrorDto;
-import com.tailtales.backend.common.enumType.ErrorCode;
-import com.tailtales.backend.common.exception.CustomException;
+import com.tailtales.backend.error.dto.ErrorDto;
+import com.tailtales.backend.error.enumType.ErrorCode;
+import com.tailtales.backend.error.exception.CustomException;
 import lombok.extern.log4j.Log4j2;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
