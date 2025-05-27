@@ -3,15 +3,53 @@ spring:
     name: auth
 
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: jdbc:mariadb://${DB_HOST:localhost}:${DB_PORT:13306}/${DB_NAME}?useSSL=false&serverTimezone=UTC
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
     driver-class-name: org.mariadb.jdbc.Driver
 
     hikari:
       minimum-idle: 2
       maximum-pool-size: 5
       connection-timeout: 5000
+
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_ID}
+            client-secret: ${GOOGLE_PASSWORD}
+            scope:
+              - profile
+              - email
+          kakao:
+            client-id: ${KAKAO_ID}
+            client-secret: ${KAKAO_PASSWORD}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            scope:
+              - profile_nickname
+              - profile_image
+              - account_email
+            redirect-uri: "{baseUrl}/{action}/oauth2/code/{registrationId}"
+            client-name: Kakao
+
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-info-authentication-method: header
+            user-name-attribute: id
+          google:
+            user-name-attribute: sub
 
   jpa:
     hibernate:
@@ -22,9 +60,36 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MariaDBDialect
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SMTP_EMAIL}
+    password: ${SMTP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+jwt:
+  secret-key: ${JWT_SECRET_KEY}
+  refresh-secret-key: ${JWT_REFRESH_SECRET_KEY}
+  access-token-validity-seconds: 3600  #1hour
+  refresh-token-validity-seconds: 604800 #7days
+
+admin:
+  server:
+    url: ${ADMIN_SERVER_URL:http://localhost:8080}
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+    org.springframework.web.cors: DEBUG
 
 server:
   port: 8083
