@@ -1,6 +1,6 @@
-package com.tailtales.backend.common.exception;
+package com.tailtales.backend.error.exception;
 
-import com.tailtales.backend.common.enumType.ErrorCode;
+import com.tailtales.backend.error.enumType.ErrorCode;
 import lombok.Getter;
 
 @Getter

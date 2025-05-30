@@ -4,8 +4,8 @@ import com.tailtales.backend.auth.dto.AdminLoginRequestDto;
 import com.tailtales.backend.auth.dto.AdminLoginResponseDto;
 import com.tailtales.backend.auth.service.AuthService;
 import com.tailtales.backend.auth.util.JwtUtil;
-import com.tailtales.backend.common.enumType.ErrorCode;
-import com.tailtales.backend.common.exception.CustomException;
+import com.tailtales.backend.error.enumType.ErrorCode;
+import com.tailtales.backend.error.exception.CustomException;
 import io.jsonwebtoken.Claims;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
@@ -17,7 +17,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import static com.tailtales.backend.common.constants.ApiConstants.*;
+import static com.tailtales.backend.common.constants.ApiConstants.ADMIN_AUTH_BASE_URL;
 
 @Log4j2
 @RestController

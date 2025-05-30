@@ -1,7 +1,7 @@
 package com.tailtales.backend.domain.member.service.impl;
 
-import com.tailtales.backend.common.enumType.ErrorCode;
-import com.tailtales.backend.common.exception.CustomException;
+import com.tailtales.backend.error.enumType.ErrorCode;
+import com.tailtales.backend.error.exception.CustomException;
 import com.tailtales.backend.domain.member.dto.AdminInsertRequestDto;
 import com.tailtales.backend.domain.member.dto.AdminResponseDto;
 import com.tailtales.backend.domain.member.dto.AdminUpdateRequestDto;
