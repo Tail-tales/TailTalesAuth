@@ -1,7 +1,7 @@
 package com.tailtales.backend.domain.member.controller;
 
-import com.tailtales.backend.common.enumType.ErrorCode;
-import com.tailtales.backend.common.exception.CustomException;
+import com.tailtales.backend.error.enumType.ErrorCode;
+import com.tailtales.backend.error.exception.CustomException;
 import com.tailtales.backend.domain.member.dto.AdminInsertRequestDto;
 import com.tailtales.backend.domain.member.dto.AdminResponseDto;
 import com.tailtales.backend.domain.member.dto.AdminUpdateRequestDto;
@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.Optional;
 
-import static com.tailtales.backend.common.constants.ApiConstants.*;
+import static com.tailtales.backend.common.constants.ApiConstants.ADMIN_BASE_URL;
 
 @Log4j2
 @RestController

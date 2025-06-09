@@ -15,7 +15,7 @@ public class MemberBatchScheduler {
     private final JobLauncher jobLauncher;
     private final Job deleteOldMembersJob;
 
-    @Scheduled(cron = "0 0 1 * * ?") // 매일 새벽 1시
+    @Scheduled(cron = "0 0 11 * * ?") // 매일 오전 11시
     public void runJob() throws Exception {
         JobParameters params = new JobParametersBuilder()
                 .addLong("time", System.currentTimeMillis())
